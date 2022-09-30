@@ -1,32 +1,113 @@
 package site.metacoding.firstapp.domain.product;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 
-//SpringBootTest 모든것을 다 메모리에 띄움
-//Vscode에서 import 자동 입력 키 : alt + shift + o 
+import site.metacoding.firstapp.config.MyBatisConfig;
+import site.metacoding.firstapp.web.product;
 
-@SpringBootTest
+@Import(MyBatisConfig.class) // MyBatisTest가 MyBatisConfig를 못읽음
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE) // 실DB사용
+@MybatisTest
 public class ProductDaoTest {
 
-    // 단위 테스트는 생성자 주입이 안된다.
-    // 외부에서 주입할때 빈 생성자만 주입해준다. -> 생성자 주입이 되지 않는다.
     @Autowired
     private ProductDao productDao;
 
-    // test는 절대 return이 안된다 void사용
     @Test
     public void findById_test() {
-        // given - 받아야 할 것 ex) delete에선 id가 필요하다 id를 임의로 준다
+        // given (받아야 될 것)
         Integer productId = 1;
 
-        // when - 테스트
+        // when (테스트)
         Product productPS = productDao.findById(productId);
 
-        // then - 검증
+        // then (검증)
         assertEquals("바나나", productPS.getProductName());
+    }
+
+    @Test
+    public void findAll_test() {
+        // given
+
+        // when
+        List<Product> productListPS = productDao.findAll();
+        System.out.println(productListPS.get(0).getProductName());
+
+        // then
+        assertEquals(2, productListPS.size());
+
+    }
+
+    // Junit은 메서드 실행직전에 트랜잭션이 걸리고, 메서드 실행이 끝나면 rollback 됨
+    // Mybatis는 ResultSet을 자바 Entity로 변경해줄때,빈생성자만 호출하고 setter가 없어도 값을 매핑해준다.
+
+    @Test
+    public void insert_test() {
+        // given
+        String productName = "수박";
+        Integer productPrice = 1000;
+        Integer productQty = 100;
+
+        Product product = new Product("수박", 1000, 100);
+
+        // when
+        int result = productDao.insert(product);
+
+        // then
+        assertEquals(1, result);
+    } // rollback
+
+    @Test
+    public void update_test() {
+        // given
+        Integer productId = 1;
+        String productName = "수박";
+        Integer productPrice = 1000;
+        Integer productQty = 100;
+
+        // 객체로 만들어준다. - 받은것
+        Product product = new Product(productName, productPrice, productQty);
+        product.setProductId(productId);
+
+        // verify
+        Product productPS = productDao.findById(product.getProductId());
+        assertTrue(productPS == null ? false : true);
+
+        // when
+        // product [id=1, productName="수박", productPrice=1000, productQty=100]
+        // productPS = [id=1, productName="바나나", productPrice=3000, productQty=98,
+        // createdAt=2022-09-29]
+        productPS.update(product);
+        // productPS = [id=1, productName="수박", productPrice=1000, productQty=100,
+        // createdAt=2022-09-29]
+        int result = productDao.update(productPS);
+
+        // then
+        assertEquals(1, result);
+    }
+
+    @Test
+    public void delete_test() {
+        // given
+        Integer productId = 1;
+
+        // verify(검증)
+        Product productPS = productDao.findById(productId);
+        assertTrue(productPS == null ? false : true);
+
+        // when
+        int result = productDao.deleteById(productId);
+
+        // then
+        assertEquals(1, result);
     }
 }
